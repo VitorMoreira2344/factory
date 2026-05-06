@@ -1,0 +1,585 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aula - Design Patterns: Singleton e Factory</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;800&family=Fira+Code:wght@500;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --color-1: #222831;
+            --color-2: #393e46;
+            --color-3: #948979;
+            --color-4: #dfd0b8;
+            --bg-light: #f8f6f3;
+        }
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-color: var(--bg-light);
+            color: var(--color-1);
+            overflow-x: hidden;
+            padding-top: 50px;
+        }
+
+        .top-bar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            background-color: var(--color-1);
+            color: white;
+            text-align: center;
+            padding: 12px 0;
+            font-size: 1.25rem;
+            z-index: 1000;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+            font-weight: 700;
+        }
+        .top-bar a {
+            color: var(--color-4);
+            text-decoration: none;
+            transition: color 0.2s;
+        }
+        .top-bar a:hover {
+            color: var(--color-3);
+            text-decoration: underline;
+        }
+
+        .slide {
+            min-height: calc(100vh - 50px);
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 2rem 4rem;
+            border-bottom: 8px solid var(--color-2);
+            position: relative;
+        }
+
+        h1 { 
+            font-size: 4rem; 
+            font-weight: 900; 
+            color: var(--color-1);
+            margin-bottom: 1rem;
+            line-height: 1.1;
+            text-align: center;
+            text-transform: uppercase;
+        }
+        
+        h2 { 
+            font-size: 2.8rem; 
+            font-weight: 800; 
+            color: var(--color-2); 
+            margin-bottom: 2rem; 
+            text-align: center;
+            position: relative;
+            display: inline-block;
+        }
+        
+        h2::after {
+            content: '';
+            display: block;
+            width: 60%;
+            height: 6px;
+            background-color: var(--color-3);
+            margin: 0.5rem auto 0;
+            border-radius: 4px;
+        }
+
+        p, li { font-size: 1.3rem; line-height: 1.6; color: #393e46; max-width: 900px; text-align: center; margin-bottom: 1rem; }
+        li { text-align: left; margin-bottom: 0.5rem; }
+
+        .card {
+            background: white;
+            border-radius: 1.5rem;
+            padding: 2rem;
+            box-shadow: 0 10px 25px -5px rgba(34, 40, 49, 0.15);
+            border: 2px solid transparent;
+            position: relative;
+        }
+        
+        .card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 2rem; right: 2rem;
+            height: 4px;
+            background-color: var(--color-3);
+            border-radius: 0 0 4px 4px;
+        }
+
+        .code-block-wrapper { position: relative; width: 100%; max-width: 850px; margin: 1rem auto; }
+        .copy-button {
+            position: absolute; top: 0.75rem; right: 0.75rem;
+            background-color: var(--color-1); color: var(--color-4);
+            border: 1px solid var(--color-4); padding: 0.25rem 0.75rem;
+            border-radius: 0.375rem; font-size: 0.875rem; cursor: pointer;
+            opacity: 0; transition: all 0.2s ease-in-out;
+            display: flex; align-items: center; gap: 0.5rem; z-index: 10;
+        }
+        .copy-button:hover { background-color: var(--color-4); color: var(--color-1); }
+        .code-block-wrapper:hover .copy-button { opacity: 1; }
+
+        .code-block {
+            background-color: var(--color-1); color: white; padding: 1.5rem;
+            border-radius: 1rem; font-family: 'Fira Code', monospace;
+            font-size: 1.1rem; text-align: left; border-left: 5px solid var(--color-3);
+            width: 100%; box-shadow: 0 10px 20px rgba(0,0,0,0.2); margin: 0;
+            overflow-x: auto;
+        }
+
+        code.inline-code {
+            background-color: #e2e8f0; padding: 0.2em 0.4em;
+            font-size: 85%; border-radius: 3px; font-family: 'Fira Code', monospace;
+            color: var(--color-1); font-weight: bold;
+        }
+        
+        .py-kw { color: #ff79c6; font-weight: bold; }
+        .py-class { color: #50fa7b; font-weight: bold; }
+        .py-func { color: #8be9fd; font-weight: bold; }
+        .py-str { color: #f1fa8c; }
+        .py-num { color: #bd93f9; }
+        .py-comment { color: #948979; font-style: italic; }
+
+        .comparison-table { width: 100%; max-width: 1000px; border-collapse: collapse; margin-top: 1rem; background: white; border-radius: 1rem; overflow: hidden; border: 2px solid var(--color-3); }
+        .comparison-table th, .comparison-table td { padding: 1rem; border-bottom: 1px solid var(--color-4); text-align: left; }
+        .comparison-table th { background-color: var(--color-3); color: white; font-weight: bold; }
+        .comparison-table tr:last-child td { border-bottom: none; }
+
+        .nav-controls {
+            position: fixed; bottom: 2rem; right: 2rem; display: flex; gap: 1rem; z-index: 100;
+        }
+        .btn-nav {
+            background-color: var(--color-1); color: var(--color-4); width: 3.5rem; height: 3.5rem;
+            border-radius: 50%; display: flex; align-items: center; justify-content: center;
+            cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+            transition: transform 0.2s, background-color 0.2s; border: 2px solid var(--color-4);
+            font-size: 1.2rem;
+        }
+        .btn-nav:hover { background-color: var(--color-2); color: white; border-color: var(--color-2); transform: scale(1.1); }
+        .counter {
+            position: fixed; bottom: 2rem; left: 2rem; background-color: var(--color-1);
+            padding: 0.5rem 1.5rem; border-radius: 2rem; font-weight: 800;
+            border: 2px solid var(--color-4); color: var(--color-4); z-index: 50;
+        }
+
+        @media print {
+            body { background: white; color: black; padding-top: 0; }
+            .top-bar { display: none !important; }
+            .slide { height: auto; min-height: 29.7cm; border-bottom: none; page-break-after: always; padding: 1cm; align-items: flex-start; position: relative; }
+            .slide:last-child { page-break-after: avoid; }
+            .slide::after { content: "Página " counter(page-counter); position: absolute; bottom: 1.5cm; right: 1.5cm; font-size: 11pt; color: #555; }
+            .nav-controls, .counter, .copy-button { display: none !important; }
+            h1 { font-size: 3rem; color: black; }
+            h2 { color: black; text-align: left; }
+            h2::after { display: none; }
+            .card, .code-block { box-shadow: none !important; border: 1px solid #ccc !important; background: white !important; color: black !important; page-break-inside: avoid; }
+            .code-block { border-left: 5px solid #000; }
+            .py-kw, .py-class, .py-func, .py-str, .py-num, .py-comment { color: black !important; font-weight: bold; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="top-bar">
+        <a href="https://willcotil.github.io/aulas2026/" target="_blank">https://willcotil.github.io/aulas2026/</a>
+    </div>
+
+    <div class="nav-controls">
+        <button class="btn-nav" id="prevBtn" title="Anterior">←</button>
+        <button class="btn-nav" id="nextBtn" title="Próximo">→</button>
+        <button class="btn-nav" id="fsBtn" title="Tela Cheia">⛶</button>
+        <button class="btn-nav" onclick="window.print()" title="Imprimir">🖨️</button>
+    </div>
+    <div id="counter" class="counter">1 / 14</div>
+
+    <main>
+        <!-- Slide 1: Capa -->
+        <section class="slide">
+            <h1>Design Patterns</h1>
+            <h2 style="border: none; font-size: 2.5rem; color: var(--color-3);">Singleton & Factory Method</h2>
+            
+            <div class="card mt-8 p-8 flex flex-col items-center border-2" style="border-color: var(--color-4);">
+                <div style="font-size: 5rem;">🎯 🏭 🔒</div>
+                <p class="mt-4 font-bold text-xl" style="color: var(--color-1);">Padrões de projeto para criar objetos de forma inteligente!</p>
+            </div>
+            <p class="mt-12 font-bold" style="color: var(--color-1);">Prof. William Paiva</p>
+        </section>
+
+        <!-- Slide 2: O que são Design Patterns? -->
+        <section class="slide">
+            <h2>O que são Design Patterns?</h2>
+            <p>São <strong>soluções reutilizáveis</strong> para problemas comuns que todo programador enfrenta.</p>
+            
+            <div class="card w-full max-w-4xl mt-6">
+                <p class="text-center">✋ Imagine que você está construindo uma casa...<br><br>
+                <strong>Design Patterns</strong> são como <strong>plantas prontas</strong> que já sabem a melhor forma de resolver problemas estruturais.<br>
+                Você não precisa inventar a roda toda vez!</p>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-8 w-full max-w-4xl">
+                <div class="p-4 bg-white rounded-lg shadow text-center border-l-4" style="border-color: var(--color-3);">
+                    <div class="text-3xl">🎯</div>
+                    <p class="font-bold mt-2">Singleton</p>
+                    <p class="text-sm text-gray-600">"Só pode ter um!"</p>
+                </div>
+                <div class="p-4 bg-white rounded-lg shadow text-center border-l-4" style="border-color: var(--color-3);">
+                    <div class="text-3xl">🏭</div>
+                    <p class="font-bold mt-2">Factory</p>
+                    <p class="text-sm text-gray-600">"Quem cria sou eu!"</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Slide 3: Problema que o Singleton resolve -->
+        <section class="slide">
+            <h2>🔒 Singleton</h2>
+            <div class="card w-full max-w-4xl">
+                <p class="font-bold text-xl mb-4" style="color: var(--color-1);">O Problema:</p>
+                <p class="text-left">Em um sistema, às vezes precisamos de <strong>APENAS UMA instância</strong> de uma classe.</p>
+                <ul class="text-left mt-4 space-y-2">
+                    <li>📁 <strong>Conexão com banco de dados</strong> - abrir 100 conexões trava o servidor</li>
+                    <li>📝 <strong>Sistema de Logs</strong> - todos os logs devem ir para o mesmo arquivo</li>
+                    <li>⚙️ <strong>Configurações globais</strong> - todo mundo usa as mesmas configurações</li>
+                    <li>🖨️ <strong>Fila de impressão</strong> - só uma fila controla todos os documentos</li>
+                </ul>
+            </div>
+            <div class="mt-6 p-4 bg-red-50 rounded-lg border-l-4 border-red-500 max-w-4xl">
+                <p class="text-red-700 font-bold text-left">⚠️ Sem Singleton: Cada parte do programa cria sua própria conexão → Bagunça e desperdício!</p>
+            </div>
+        </section>
+
+        <!-- Slide 4: Solução Singleton (exemplo visual) -->
+        <section class="slide">
+            <h2>Como o Singleton resolve?</h2>
+            <div class="card w-full max-w-4xl">
+                <div class="flex flex-col md:flex-row items-center justify-around gap-8">
+                    <div class="text-center">
+                        <div class="text-6xl">❌</div>
+                        <div class="mt-2 p-3 bg-gray-200 rounded">
+                            <div>Conexão 1</div>
+                            <div>Conexão 2</div>
+                            <div>Conexão 3</div>
+                        </div>
+                        <p class="text-sm mt-2">Sem Singleton: Várias instâncias</p>
+                    </div>
+                    <div class="text-5xl text-gray-400">→</div>
+                    <div class="text-center">
+                        <div class="text-6xl">✅</div>
+                        <div class="mt-2 p-3 bg-green-200 rounded">
+                            <div class="font-bold">ÚNICA Conexão</div>
+                        </div>
+                        <p class="text-sm mt-2">Com Singleton: Uma instância compartilhada</p>
+                    </div>
+                </div>
+                <p class="mt-6 text-center text-gray-600"><strong>Regra de ouro:</strong> O construtor é privado e um método estático retorna sempre a MESMA instância.</p>
+            </div>
+        </section>
+
+        <!-- Slide 5: Problema que o Factory resolve -->
+        <section class="slide">
+            <h2>🏭 Factory Method</h2>
+            <div class="card w-full max-w-4xl">
+                <p class="font-bold text-xl mb-4" style="color: var(--color-1);">O Problema:</p>
+                <p>Seu código precisa criar <strong>muitos tipos diferentes de objetos</strong> (ex: EmailService, SMSService, PushService).</p>
+                <div class="bg-gray-100 p-4 rounded-lg mt-4 font-mono text-sm">
+                    <span class="text-red-600">// SEM Factory - código bagunçado e repetido</span><br>
+                    if (tipo == "email") service = new EmailService();<br>
+                    if (tipo == "sms") service = new SMSService();<br>
+                    if (tipo == "push") service = new PushService();<br>
+                    <span class="text-red-600">// Imagine isso em 10 lugares diferentes...</span>
+                </div>
+                <p class="mt-4 text-left"><strong class="text-red-600">Problema:</strong> O código cliente fica <strong>acoplado</strong> às classes concretas. Se um novo tipo surgir, você precisa mudar em vários lugares!</p>
+            </div>
+        </section>
+
+        <!-- Slide 6: Solução Factory -->
+        <section class="slide">
+            <h2>Como o Factory resolve?</h2>
+            <div class="card w-full max-w-4xl">
+                <div class="bg-green-50 p-4 rounded-lg">
+                    <p class="font-bold text-green-800">✅ Centralizamos a criação em uma FÁBRICA!</p>
+                </div>
+                <div class="mt-4 p-4 bg-gray-100 rounded-lg font-mono text-sm">
+                    <span class="text-green-700">// COM Factory - código limpo e organizado</span><br>
+                    class NotificationFactory:<br>
+                    &nbsp;&nbsp;&nbsp;&nbsp;def create(type):<br>
+                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;if type == "email": return EmailService()<br>
+                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;if type == "sms": return SMSService()<br>
+                    <br>
+                    <span class="text-gray-500">// No código cliente:</span><br>
+                    service = NotificationFactory.create("email")
+                </div>
+                <p class="mt-4 text-left"><strong>Vantagem:</strong> Se surgir um novo tipo (ex: WhatsAppService), só a Factory muda. O resto do código continua igual!</p>
+            </div>
+        </section>
+
+        <!-- Slide 7: Código Python - Singleton -->
+        <section class="slide">
+            <h2>💻 Código: Singleton em Python</h2>
+            <div class="code-block-wrapper">
+                <button class="copy-button">Copiar</button>
+                <pre class="code-block">
+<span class="py-comment"># Exemplo: Conexão com Banco de Dados (única instância)</span>
+<span class="py-kw">class</span> <span class="py-class">DatabaseConnection</span>:
+    _instance = <span class="py-kw">None</span>   <span class="py-comment"># Guarda a única instância</span>
+
+    <span class="py-kw">def</span> <span class="py-func">__new__</span>(cls):
+        <span class="py-kw">if</span> cls._instance <span class="py-kw">is</span> <span class="py-kw">None</span>:
+            print(<span class="py-str">"🔌 Criando conexão com o banco..."</span>)
+            cls._instance = <span class="py-kw">super</span>().<span class="py-func">__new__</span>(cls)
+        <span class="py-kw">return</span> cls._instance
+
+    <span class="py-kw">def</span> <span class="py-func">query</span>(self, sql):
+        print(<span class="py-str">f"📀 Executando: {sql}"</span>)
+
+<span class="py-comment"># Testando</span>
+db1 = DatabaseConnection()
+db2 = DatabaseConnection()
+print(<span class="py-str">f"São iguais? {db1 is db2}"</span>)  <span class="py-comment"># True!</span></pre>
+            </div>
+            <p class="mt-4 text-sm text-gray-500">🔑 <strong>Mágica:</strong> O método <code class="inline-code">__new__</code> controla a criação. Se já existe, reutiliza!</p>
+        </section>
+
+        <!-- Slide 8: Código Python - Factory -->
+        <section class="slide">
+            <h2>💻 Código: Factory em Python</h2>
+            <div class="code-block-wrapper">
+                <button class="copy-button">Copiar</button>
+                <pre class="code-block">
+<span class="py-comment"># Produtos (diferentes tipos de serviço)</span>
+<span class="py-kw">class</span> <span class="py-class">EmailService</span>:
+    <span class="py-kw">def</span> <span class="py-func">send</span>(self, msg): <span class="py-kw">return</span> <span class="py-str">f"📧 Email: {msg}"</span>
+
+<span class="py-kw">class</span> <span class="py-class">SMSService</span>:
+    <span class="py-kw">def</span> <span class="py-func">send</span>(self, msg): <span class="py-kw">return</span> <span class="py-str">f"📱 SMS: {msg}"</span>
+
+<span class="py-kw">class</span> <span class="py-class">PushService</span>:
+    <span class="py-kw">def</span> <span class="py-func">send</span>(self, msg): <span class="py-kw">return</span> <span class="py-str">f"🔔 Push: {msg}"</span>
+
+<span class="py-comment"># A FÁBRICA</span>
+<span class="py-kw">class</span> <span class="py-class">NotificationFactory</span>:
+    <span class="py-kw">def</span> <span class="py-func">create</span>(self, tipo):
+        <span class="py-kw">if</span> tipo == <span class="py-str">"email"</span>: <span class="py-kw">return</span> EmailService()
+        <span class="py-kw">if</span> tipo == <span class="py-str">"sms"</span>: <span class="py-kw">return</span> SMSService()
+        <span class="py-kw">if</span> tipo == <span class="py-str">"push"</span>: <span class="py-kw">return</span> PushService()
+
+<span class="py-comment"># Usando a fábrica</span>
+fabrica = NotificationFactory()
+servico = fabrica.create(<span class="py-str">"email"</span>)
+print(servico.send(<span class="py-str">"Bem-vindo!"</span>))</pre>
+            </div>
+        </section>
+
+        <!-- Slide 9: Código completo (Singleton + Factory juntos) -->
+        <section class="slide">
+            <h2>🎯 Juntando tudo!</h2>
+            <div class="code-block-wrapper">
+                <button class="copy-button">Copiar</button>
+                <pre class="code-block" style="max-height: 500px; overflow-y: auto;">
+<span class="py-comment"># 1. SINGLETON - Logger global</span>
+<span class="py-kw">class</span> <span class="py-class">Logger</span>:
+    _instance = <span class="py-kw">None</span>
+    
+    <span class="py-kw">def</span> <span class="py-func">__new__</span>(cls):
+        <span class="py-kw">if</span> cls._instance <span class="py-kw">is</span> <span class="py-kw">None</span>:
+            cls._instance = <span class="py-kw">super</span>().<span class="py-func">__new__</span>(cls)
+            cls._instance.logs = []
+            print(<span class="py-str">"📝 Logger criado!"</span>)
+        <span class="py-kw">return</span> cls._instance
+    
+    <span class="py-kw">def</span> <span class="py-func">log</span>(self, msg):
+        self.logs.append(msg)
+        print(<span class="py-str">f"[LOG] {msg}"</span>)
+
+<span class="py-comment"># 2. PRODUTOS (Serviços de notificação)</span>
+<span class="py-kw">class</span> <span class="py-class">EmailService</span>:
+    <span class="py-kw">def</span> <span class="py-func">send</span>(self, msg):
+        Logger().log(<span class="py-str">f"Email enviado: {msg}"</span>)
+        <span class="py-kw">return</span> <span class="py-str">f"📧 {msg}"</span>
+
+<span class="py-kw">class</span> <span class="py-class">SMSService</span>:
+    <span class="py-kw">def</span> <span class="py-func">send</span>(self, msg):
+        Logger().log(<span class="py-str">f"SMS enviado: {msg}"</span>)
+        <span class="py-kw">return</span> <span class="py-str">f"📱 {msg}"</span>
+
+<span class="py-comment"># 3. FACTORY</span>
+<span class="py-kw">class</span> <span class="py-class">NotificationFactory</span>:
+    <span class="py-kw">def</span> <span class="py-func">create</span>(self, tipo):
+        <span class="py-kw">if</span> tipo == <span class="py-str">"email"</span>: <span class="py-kw">return</span> EmailService()
+        <span class="py-kw">if</span> tipo == <span class="py-str">"sms"</span>: <span class="py-kw">return</span> SMSService()
+
+<span class="py-comment"># 4. EXECUTANDO</span>
+fabrica = NotificationFactory()
+servico1 = fabrica.create(<span class="py-str">"email"</span>)
+servico2 = fabrica.create(<span class="py-str">"sms"</span>)
+
+print(servico1.send(<span class="py-str">"Olá mundo!"</span>))
+print(servico2.send(<span class="py-str">"Mensagem urgente"</span>))
+
+<span class="py-comment"># O mesmo logger foi usado nas duas chamadas!</span></pre>
+            </div>
+        </section>
+
+        <!-- Slide 10: Resposta às perguntas -->
+        <section class="slide">
+            <h2>❓ Perguntas da aula</h2>
+            <div class="card w-full max-w-5xl">
+                <div class="space-y-6">
+                    <div class="border-l-4 border-blue-500 pl-4">
+                        <p class="font-bold text-xl text-blue-700">1. PARA QUE SERVE O SINGLETON EM UM SERVIÇO?</p>
+                        <p>Garante que um recurso compartilhado (conexão com banco, logger, cache) tenha <strong>UMA ÚNICA INSTÂNCIA</strong> em todo o servidor. Evita desperdício de memória, conflitos e inconsistências.</p>
+                    </div>
+                    <div class="border-l-4 border-green-500 pl-4">
+                        <p class="font-bold text-xl text-green-700">2. COMO O FACTORY AJUDA COM MUITOS TIPOS DE SERVIÇOS?</p>
+                        <p>Centraliza a lógica de criação em um único lugar. Se um novo tipo surgir, você só muda a Factory. O código cliente fica <strong>desacoplado</strong> e mais fácil de dar manutenção.</p>
+                    </div>
+                    <div class="border-l-4 border-purple-500 pl-4">
+                        <p class="font-bold text-xl text-purple-700">3. POR QUE CONTROLAR A CRIAÇÃO DE OBJETOS NO SERVIDOR?</p>
+                        <p>Para garantir que objetos sejam criados <strong>corretamente</strong> (com conexões abertas, configurados), evitar vazamento de memória, aplicar políticas (ex: limite de instâncias) e facilitar testes.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Slide 11: Comparação rápida -->
+        <section class="slide">
+            <h2>📊 Resumo Comparativo</h2>
+            <table class="comparison-table">
+                <thead>
+                    <tr>
+                        <th>Característica</th>
+                        <th>Singleton</th>
+                        <th>Factory Method</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr><td><strong>Objetivo</strong></td><td>Garantir 1 única instância</td><td>Centralizar criação de objetos</td></tr>
+                    <tr class="bg-gray-50"><td><strong>Problema que resolve</strong></td><td>Múltiplas conexões/recursos</td><td>Acoplamento a classes concretas</td></tr>
+                    <tr><td><strong>Quando usar</strong></td><td>Recursos compartilhados (DB, logs)</td><td>Muitos tipos de objetos similares</td></tr>
+                    <tr class="bg-gray-50"><td><strong>Analogia</strong></td><td>Único forno da padaria</td><td>Máquina que faz diferentes pães</td></tr>
+                </tbody>
+            </table>
+        </section>
+
+        <!-- Slide 12: Analogia Final -->
+        <section class="slide">
+            <h2>🍕 Analogia Final</h2>
+            <div class="card w-full max-w-4xl">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="text-center p-4 bg-gray-100 rounded-lg">
+                        <div class="text-5xl mb-2">🏪</div>
+                        <p class="font-bold">Singleton = O balcão único de atendimento</p>
+                        <p class="text-sm">Todos os clientes usam o MESMO balcão. Não pode ter dois!</p>
+                    </div>
+                    <div class="text-center p-4 bg-gray-100 rounded-lg">
+                        <div class="text-5xl mb-2">🏭</div>
+                        <p class="font-bold">Factory = A máquina de refrigerantes</p>
+                        <p class="text-sm">Você aperta o botão (Cola, Guaraná, Laranja) e ela cria o produto certo.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Slide 13: Exercícios -->
+        <section class="slide" style="border:none; background-color: var(--color-1);">
+            <h1 style="color: var(--color-4); background: none;">Hora de Praticar!</h1>
+            <p style="color: white; opacity: 0.9;">Exercícios para fixar Singleton e Factory</p>
+            
+            <div class="mt-8 p-6 card w-full max-w-4xl text-left bg-white">
+                <p class="font-bold mb-4 text-xl" style="color: var(--color-1);">📝 Lista de Exercícios:</p>
+                <ol class="space-y-3 text-lg text-gray-700 list-decimal pl-5">
+                    <li>Crie um Singleton chamado <code>ConfigManager</code> que guarda configurações (ex: "tema_escuro = True", "idioma = PT").</li>
+                    <li>Implemente uma Factory para criar diferentes tipos de <strong>notificação</strong> (WhatsApp, Telegram, Signal).</li>
+                    <li>Explique com suas palavras: O que aconteceria se o Singleton NÃO fosse usado em um sistema de conexão com banco de dados?</li>
+                    <li>Modifique o exemplo da padaria (forno) para incluir um novo tipo de pão: "Pão de Queijo".</li>
+                    <li><strong>Desafio:</strong> Crie um sistema de logger Singleton que escreve em arquivo e uma Factory que cria diferentes "formatters" (JSON, XML, texto plano).</li>
+                </ol>
+                <p class="mt-6 text-sm text-gray-500">📌 Entregue os códigos em arquivos .py no Google Classroom.</p>
+            </div>
+        </section>
+
+        <!-- Slide 14: Final -->
+        <section class="slide">
+            <h1>Dúvidas?</h1>
+            <div class="card mt-8">
+                <div class="text-6xl mb-4">🤔 💡</div>
+                <p class="text-xl font-bold">Design Patterns são ferramentas poderosas</p>
+                <p class="mt-2">Use Singleton com moderação! Factory é seu melhor amigo quando há muitos tipos.</p>
+            </div>
+            <p class="mt-12 font-bold">Bons códigos! 👨‍💻</p>
+        </section>
+    </main>
+
+    <script>
+        document.querySelectorAll('.copy-button').forEach(button => {
+            button.addEventListener('click', (e) => {
+                const container = e.currentTarget.closest('.code-block-wrapper');
+                const codeEl = container.querySelector('.code-block');
+                const codeText = codeEl.innerText;
+                navigator.clipboard.writeText(codeText).then(() => {
+                    const originalText = button.textContent;
+                    button.textContent = 'Copiado!';
+                    setTimeout(() => { button.textContent = originalText; }, 2000);
+                });
+            });
+        });
+
+        const slides = document.querySelectorAll('.slide');
+        const prevBtn = document.getElementById('prevBtn');
+        const nextBtn = document.getElementById('nextBtn');
+        const fsBtn = document.getElementById('fsBtn');
+        const counterElement = document.getElementById('counter');
+        let currentSlide = 0;
+
+        function updateCounter() {
+            if (counterElement) {
+                counterElement.textContent = `${currentSlide + 1} / ${slides.length}`;
+            }
+        }
+
+        function scrollToSlide(index) {
+            if (index >= 0 && index < slides.length) {
+                currentSlide = index;
+                const topOffset = 50;
+                const elementPosition = slides[index].getBoundingClientRect().top;
+                const offsetPosition = elementPosition + window.pageYOffset - topOffset;
+                window.scrollTo({ top: offsetPosition, behavior: "smooth" });
+                updateCounter();
+            }
+        }
+
+        nextBtn.addEventListener('click', () => scrollToSlide(currentSlide + 1));
+        prevBtn.addEventListener('click', () => scrollToSlide(currentSlide - 1));
+        
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowRight') scrollToSlide(currentSlide + 1);
+            if (e.key === 'ArrowLeft') scrollToSlide(currentSlide - 1);
+        });
+
+        fsBtn.addEventListener('click', () => {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen();
+            } else {
+                document.exitFullscreen();
+            }
+        });
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    currentSlide = Array.from(slides).indexOf(entry.target);
+                    updateCounter();
+                }
+            });
+        }, { threshold: 0.5 });
+        
+        slides.forEach(slide => observer.observe(slide));
+        updateCounter();
+    </script>
+</body>
+</html>
